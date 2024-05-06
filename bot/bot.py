@@ -124,11 +124,12 @@ async def render_latex_menu(interaction: discord.Interaction, message: discord.M
         await interaction.response.send_message("The message doesn't contain any content.")
 
 @client.tree.command()
-async def render_ai(interaction: discord.Interaction, message: discord.Message):
+@app_commands.describe(equation="Enter the equation in LaTeX format.")
+async def render_ai(interaction: discord.Interaction, equation: str):
     """Render a expression and converts it to LaTeX with AI and then returns it as an image."""
     await interaction.response.defer(ephemeral=False, thinking=True)
     try:
-        response = get_AI_prompt(message.content.strip())
+        response = get_AI_prompt(equation)
         image_path = visualize_equation(response.text)
         with open(image_path, 'rb') as image_file:
             await interaction.followup.send(file=discord.File(image_file, os.path.basename(image_path)))
@@ -138,13 +139,12 @@ async def render_ai(interaction: discord.Interaction, message: discord.Message):
     except Exception as e:
         await interaction.followup.send("An unexpected error occurred while rendering the equation.")
 
-@client.tree.context_menu()
-@app_commands.describe(equation="Enter the equation in LaTeX format.")
-async def render_ai(interaction: discord.Interaction, equation: str):
+@client.tree.context_menu(name="Render with AI")
+async def render_ai(interaction: discord.Interaction, message: discord.Message):
     """Render a expression and converts it to LaTeX with AI and then returns it as an image."""
     await interaction.response.defer(ephemeral=False, thinking=True)
     try:
-        response = get_AI_prompt(equation)
+        response = get_AI_prompt(message.content.strip())
         image_path = visualize_equation(response.text)
         with open(image_path, 'rb') as image_file:
             await interaction.followup.send(file=discord.File(image_file, os.path.basename(image_path)))
