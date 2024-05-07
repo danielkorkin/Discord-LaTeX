@@ -162,6 +162,47 @@ async def render_ai(interaction: discord.Interaction, message: discord.Message):
     except Exception as e:
         await interaction.followup.send("An unexpected error occurred while rendering the equation.")
 
+@client.tree.command()
+@app_commands.describe(equation="Enter the equation in LaTeX format.")
+@app_commands.choices(operation=[
+    app_commands.Choice(name="Simplify", value="simplify"),
+    app_commands.Choice(name="Factor", value="factor"),
+    app_commands.Choice(name="Solve", value="solve"),
+])
+async def math_operation(interaction: discord.Interaction, equation: str, operation: str):
+    """Perform a mathematical operation on a given equation."""
+    await interaction.response.defer(ephemeral=False, thinking=True)
+
+    equation = get_AI_prompt(equation)
+    # Parse the equation string into a Sympy expression
+    try:
+        expr = sp.sympify(equation, evaluate=False)
+    except sp.SympifyError as e:
+        await interaction.followup.send(f"Error parsing the equation: {e}")
+        return
+
+    try:
+        if operation == 'simplify':
+            result = sp.simplify(expr)
+        elif operation == 'factor':
+            result = sp.factor(expr)
+        elif operation == 'solve':
+            # Assuming it's an equation and solving for x
+            result = sp.solve(expr, sp.Symbol('x'))
+        else:
+            await interaction.followup.send("Unsupported operation. Please use 'simplify', 'factor', or 'solve'.")
+            return
+
+        # Render the result as LaTeX and create an image
+        latex_result = sp.latex(result)
+        image_path = visualize_equation(latex_result)
+        with open(image_path, 'rb') as image_file:
+            await interaction.followup.send(file=discord.File(image_file, os.path.basename(image_path)))
+        os.remove(image_path)
+    except Exception as e:
+        await interaction.followup.send(f"An unexpected error occurred while performing the operation: {e}")
+
+
 
 # Run the client with the bot token
 client.run(TOKEN)
