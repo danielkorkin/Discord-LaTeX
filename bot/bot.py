@@ -16,6 +16,9 @@ import google.generativeai as genai
 # Status
 import cronitor
 
+# Text stuff
+from text import help_text
+
 # Load environment variables
 load_dotenv()
 TOKEN = os.getenv("TOKEN")
@@ -145,7 +148,7 @@ def plot_function(expression: str):
 def get_AI_prompt(equation:str):
     response = model.generate_content(f"{prompt} {equation}")
     response = format_to_latex(response.text)
-    
+
     try:
         response.replace("$", "")
     except Exception:
@@ -285,6 +288,10 @@ async def plot(interaction: discord.Interaction, expression: str):
             await interaction.followup.send(file=discord.File(image_file, os.path.basename(image_path)))
         os.remove(image_path)
 
+@client.tree.command()
+async def latex_help(interaction: discord.Interaction):
+    """Help for formatting and using the LaTeX system"""
+    await interaction.response.send_message(help_text, ephemeral=True)
 
 
 # Run the client with the bot token
