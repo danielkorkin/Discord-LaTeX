@@ -7,7 +7,8 @@ import time
 import subprocess
 from pylatex import Document, Math, NoEscape
 from pdf2image import convert_from_path
-
+import sympy as sp
+from typing import List
 # AI
 import google.generativeai as genai
 
