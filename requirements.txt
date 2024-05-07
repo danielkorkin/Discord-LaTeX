@@ -38,7 +38,7 @@ pdf2image==1.17.0
 pillow==10.3.0
 platformdirs==4.2.1
 proto-plus==1.23.0
-protobuf==4.25.3
+protobuf==5.26.1
 pyasn1==0.6.0
 pyasn1_modules==0.4.0
 pydantic==2.7.1
