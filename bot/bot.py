@@ -34,6 +34,24 @@ MY_GUILD = discord.Object(id=GUILD_ID)  # Replace with your guild ID
 genai.configure(api_key=GOOGLE_API_KEY)
 model = genai.GenerativeModel("gemini-1.0-pro")
 prompt = "Provide just the LaTeX function for the following equation/expression, even if it is incorrect, follow strict LaTeX formatting however do not surround the raw equation/expression with anything "
+
+class MetaCalculatorButton(discord.ui.View):
+    def __init__(self, expression):
+        super().__init__()
+        # Create the URL link for Meta Calculator
+        url = self.create_meta_calculator_url(expression)
+        # Add a button to the view
+        self.add_item(discord.ui.Button(label="View in Meta Calculator", url=url, style=discord.ButtonStyle.url))
+
+    @staticmethod
+    def create_meta_calculator_url(expression):
+        from urllib.parse import quote
+        # Properly URL encode the expression
+        encoded_expression = quote(expression)
+        # Return the full URL for Meta Calculator with the encoded expression
+        return f"https://www.meta-calculator.com/?panel-101-equations&data-bounds-xMin=-8&data-bounds-xMax=8&data-bounds-yMin=-11&data-bounds-yMax=11&data-equations-0=%22{encoded_expression}%22&data-rand=undefined&data-hideGrid=false"
+
+
 # Create the bot client
 class MyClient(discord.Client):
     def __init__(self, *, intents: discord.Intents):
@@ -284,9 +302,13 @@ async def plot(interaction: discord.Interaction, expression: str):
     if error:
         await interaction.followup.send(f"An error occurred while plotting the function: {error}")
     else:
+        # Create the button view with the expression
+        view = MetaCalculatorButton(expression)
         with open(image_path, 'rb') as image_file:
-            await interaction.followup.send(file=discord.File(image_file, os.path.basename(image_path)))
+            # Send the image along with the button view
+            await interaction.followup.send(file=discord.File(image_file, os.path.basename(image_path)), view=view)
         os.remove(image_path)
+
 
 @client.tree.command()
 async def latex_help(interaction: discord.Interaction):
