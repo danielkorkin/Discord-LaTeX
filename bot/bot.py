@@ -17,7 +17,7 @@ import google.generativeai as genai
 import cronitor
 
 # Text stuff
-from text import help_text
+from text import HELP_TEXT
 
 # Load environment variables
 load_dotenv()
@@ -291,7 +291,7 @@ async def plot(interaction: discord.Interaction, expression: str):
 @client.tree.command()
 async def latex_help(interaction: discord.Interaction):
     """Help for formatting and using the LaTeX system"""
-    await interaction.response.send_message(help_text, ephemeral=True)
+    await interaction.response.send_message(HELP_TEXT, ephemeral=True)
 
 
 # Run the client with the bot token

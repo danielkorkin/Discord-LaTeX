@@ -1,4 +1,8 @@
-help_text = """
+"""
+Collection of needed text and variables
+"""
+
+HELP_TEXT = """
 # LaTeX Reference Cheat Sheet
 
 ## Common Symbols
