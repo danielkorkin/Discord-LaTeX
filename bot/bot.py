@@ -8,6 +8,8 @@ import subprocess
 from pylatex import Document, Math, NoEscape
 from pdf2image import convert_from_path
 import sympy as sp
+import matplotlib.pyplot as plt
+import numpy as np
 # AI
 import google.generativeai as genai
 
@@ -28,8 +30,7 @@ MY_GUILD = discord.Object(id=GUILD_ID)  # Replace with your guild ID
 # AI Config
 genai.configure(api_key=GOOGLE_API_KEY)
 model = genai.GenerativeModel("gemini-1.0-pro")
-prompt = "Provide just the LaTeX function for the following equation/expression, even if it is incorrect: "
-
+prompt = "Provide just the LaTeX function for the following equation/expression, even if it is incorrect, follow strict LaTeX formatting however do not surround the raw equation/expression with anything "
 # Create the bot client
 class MyClient(discord.Client):
     def __init__(self, *, intents: discord.Intents):
@@ -94,10 +95,79 @@ def visualize_equation(equation: str):
 
     return png_filename
 
+def preprocess_expression(expression: str) -> str:
+    expression = get_AI_prompt(expression)
+    print(expression)
 
+    # Further processing rules can be added here
+    return expression
+
+
+def plot_function(expression: str):
+
+    # Strip 'y=' or 'f(x)=' if it exists to get just the RHS
+    if '=' in expression:
+        expression = expression.split('=')[1]
+
+    # Preprocess the expression to correct common syntax issues
+    expression = preprocess_expression(expression)
+
+    # Create a range of x values
+    x = np.linspace(-10, 10, 400)
+    
+    try:
+        # Convert the string expression to a sympy expression and then to a numpy function
+        expr = sp.sympify(expression)
+        f = sp.lambdify(sp.Symbol('x'), expr, 'numpy')
+        
+        # Calculate y values based on the expression
+        y = f(x)
+        
+        # Create the plot
+        plt.figure(figsize=(8, 6))
+        plt.plot(x, y, label=f"y = {expression}")
+        plt.title(f"Plot of y = {expression}")
+        plt.xlabel('x')
+        plt.ylabel('y')
+        plt.grid(True)
+        plt.legend()
+
+        # Save the plot to a file
+        filename = 'plot.png'
+        plt.savefig(filename)
+        plt.close()
+
+        return filename, None  # Return the filename and no error
+    except Exception as e:
+        return None, str(e)  # Return no filename and the error message
+
+ 
 def get_AI_prompt(equation:str):
     response = model.generate_content(f"{prompt} {equation}")
+    response = format_to_latex(response.text)
+    
+    try:
+        response.replace("$", "")
+    except Exception:
+        pass
+
     return response
+
+def format_to_latex(expression):
+    # Replace implicit multiplication (e.g., '4x') with explicit (e.g., '4*x')
+    terms = list(expression)  # Convert expression into a list of characters
+    formatted_expression = []
+
+    # Iterate over the characters to identify and format multiplication
+    for i, char in enumerate(terms):
+        # Check if a multiplication should be inserted
+        if char.isdigit() and i+1 < len(terms) and terms[i+1].isalpha():
+            formatted_expression.append(char + '*')
+        else:
+            formatted_expression.append(char)
+
+    # Join all parts into a single string
+    return ''.join(formatted_expression)
 
 @client.tree.command()
 @app_commands.describe(equation="Enter the equation in LaTeX format.")
@@ -200,6 +270,20 @@ async def math_operation(interaction: discord.Interaction, equation: str, operat
         os.remove(image_path)
     except Exception as e:
         await interaction.followup.send(f"An unexpected error occurred while performing the operation: {e}")
+
+@client.tree.command()
+@app_commands.describe(expression="Enter the function expression, like 'x^2 - 3*x + 5'.")
+async def plot(interaction: discord.Interaction, expression: str):
+    """Plot a mathematical function based on the given expression."""
+    await interaction.response.defer(ephemeral=False, thinking=True)
+    
+    image_path, error = plot_function(expression)
+    if error:
+        await interaction.followup.send(f"An error occurred while plotting the function: {error}")
+    else:
+        with open(image_path, 'rb') as image_file:
+            await interaction.followup.send(file=discord.File(image_file, os.path.basename(image_path)))
+        os.remove(image_path)
 
 
 
