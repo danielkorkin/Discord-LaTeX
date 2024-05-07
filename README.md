@@ -19,10 +19,7 @@ A Discord bot that generates LaTeX equations from text inputs and converts them 
 2. **Create a Bot:**
    - Under `Bot`, click `Add Bot`.
    - Save your token and add it to the `.env` file.
-3. **Set Permissions:**
-   - Enable required `Intents` like `Message Content`.
-   - Invite the bot to your server with the necessary permissions.
-
+   - 
 ### 2. Setting Up Your Environment
 
 - Create a `.env` file with the following variables:
