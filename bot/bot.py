@@ -1,5 +1,6 @@
 import discord
 from discord import app_commands
+from discord.ext import tasks
 from dotenv import load_dotenv
 import os
 import time
@@ -10,11 +11,17 @@ from pdf2image import convert_from_path
 # AI
 import google.generativeai as genai
 
+# Status
+import cronitor
+
 # Load environment variables
 load_dotenv()
 TOKEN = os.getenv("TOKEN")
 GUILD_ID = os.getenv("GUILD_ID")
 GOOGLE_API_KEY=os.getenv('GOOGLE_API_KEY')
+CRONITOR_API_KEY = os.getenv("CRONITOR_API_KEY")
+
+cronitor.api_key = CRONITOR_API_KEY
 
 MY_GUILD = discord.Object(id=GUILD_ID)  # Replace with your guild ID
 
