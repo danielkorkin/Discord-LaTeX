@@ -118,7 +118,6 @@ def visualize_equation(equation: str):
 
 def preprocess_expression(expression: str) -> str:
     expression = get_AI_prompt(expression)
-    print(expression)
 
     # Further processing rules can be added here
     return expression
