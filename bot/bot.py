@@ -184,6 +184,12 @@ def get_AI_prompt(equation:str):
     except Exception:
         pass
 
+    try:
+        response.replace("\(", "")
+        response.replace("\)", "")
+    except Exception:
+        pass
+
     return response
 
 def format_to_latex(expression):
