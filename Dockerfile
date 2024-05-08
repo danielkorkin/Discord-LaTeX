@@ -1,12 +1,20 @@
 # Dockerfile
-# Base image with Python
 FROM python:3.11-slim
 
-# Install system dependencies for TeX Live and poppler-utils
+# Install system dependencies for TeX Live, poppler-utils, CMake, and essential build tools
 RUN apt-get update && apt-get install -y \
     texlive-full \
     poppler-utils \
+    cmake \
+    build-essential \
+    autoconf \
+    automake \
+    libtool \
+    ninja-build \
     && apt-get clean
+
+# Check CMake installation
+RUN cmake --version
 
 # Create a working directory
 WORKDIR /usr/src/app

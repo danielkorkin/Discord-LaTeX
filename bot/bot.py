@@ -26,7 +26,9 @@ GUILD_ID = os.getenv("GUILD_ID")
 GOOGLE_API_KEY=os.getenv('GOOGLE_API_KEY')
 CRONITOR_API_KEY = os.getenv("CRONITOR_API_KEY")
 
+MONITOR_NAME = "discord-latex-bot"
 cronitor.api_key = CRONITOR_API_KEY
+monitor = cronitor.Monitor(MONITOR_NAME)
 
 MY_GUILD = discord.Object(id=GUILD_ID)  # Replace with your guild ID
 
@@ -71,6 +73,17 @@ async def on_ready():
     print(f'Logged in as {client.user} (ID: {client.user.id})')
     print('------')
     await client.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name="Mathematical Equations 🤓"))
+
+@tasks.loop(minutes=5)
+async def send_periodic_request():
+    guild_count = len(client.guilds)
+    ping = round(client.latency * 1000)
+    monitor.ping(metrics={'guilds': guild_count, 'ping': ping})
+
+@send_periodic_request.before_loop
+async def before_send_request():
+    await client.wait_until_ready()
+    print("Starting periodic check-ins.")
 
 def visualize_equation(equation: str):
     """Generate a PDF from the given LaTeX equation and convert it to PNG, ensuring visibility with padding."""
