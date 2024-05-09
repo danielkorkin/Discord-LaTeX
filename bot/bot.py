@@ -10,6 +10,7 @@ from pdf2image import convert_from_path
 import sympy as sp
 import matplotlib.pyplot as plt
 import numpy as np
+from scipy.stats import linregress
 # AI
 import google.generativeai as genai
 
@@ -95,7 +96,38 @@ class TableInputView(discord.ui.View):
         # Add a submit button at the end
         self.add_item(SubmitButton(data=rows))
 
+class ScatterPlotButton(discord.ui.Button):
+    def __init__(self, data):
+        super().__init__(label="Show Scatter Plot with Best Fit", style=discord.ButtonStyle.secondary)
+        self.data = data  # Pass the x_values and y_values
 
+    async def callback(self, interaction: discord.Interaction):
+        if not interaction.response.is_done():
+            await interaction.response.defer()
+        x_values, y_values = self.data
+        # Calculate the line of best fit
+        slope, intercept, r_value, _, _ = linregress(x_values, y_values)
+        line = slope * np.array(x_values) + intercept
+
+        # Generate the plot
+        plt.figure(figsize=(8, 6))
+        plt.scatter(x_values, y_values, color='blue', label='Data Points')
+        plt.plot(x_values, line, color='red', label=f'Best Fit Line: y={slope:.2f}x+{intercept:.2f}')
+        plt.title(f"Scatter Plot with Line of Best Fit\nCorrelation Coefficient: {r_value:.2f}")
+        plt.xlabel('X Values')
+        plt.ylabel('Y Values')
+        plt.legend()
+        plt.grid(True)
+
+        # Save and send the updated plot
+        filename = 'scatter_plot.png'
+        plt.savefig(filename)
+        plt.close()
+
+        # Use followup to send the file after initial interaction has been deferred
+        file = discord.File(filename, filename='scatter_plot.png')
+        await interaction.followup.send(content="Updated to Scatter Plot with Best Fit", file=file)
+        os.remove(filename)
 
 class SubmitButton(discord.ui.Button):
     def __init__(self, data):
@@ -105,9 +137,20 @@ class SubmitButton(discord.ui.Button):
     async def callback(self, interaction: discord.Interaction):
         view = self.view
         plot_path = self.create_plot(view)
+        x_values, y_values = self.extract_data(view)
         file = discord.File(plot_path, filename="plot.png")
-        await interaction.response.send_message(file=file)
+        
+        # Add the ScatterPlotButton with the data
+        button_view = discord.ui.View()
+        button_view.add_item(ScatterPlotButton((x_values, y_values)))
+        
+        await interaction.response.send_message(file=file, view=button_view)
         os.remove(plot_path)
+
+    def extract_data(self, view):
+        x_values = [float(view.children[i * 2].label.split()[-1]) for i in range(self.data)]
+        y_values = [float(view.children[i * 2 + 1].label.split()[-1]) for i in range(self.data)]
+        return x_values, y_values
 
     def create_plot(self, view):
         x_values = []
