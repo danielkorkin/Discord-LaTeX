@@ -10,6 +10,8 @@ from pdf2image import convert_from_path
 import sympy as sp
 import matplotlib.pyplot as plt
 import numpy as np
+from scipy.stats import linregress
+from io import BytesIO
 # AI
 import google.generativeai as genai
 
@@ -53,6 +55,122 @@ class MetaCalculatorButton(discord.ui.View):
         # Return the full URL for Meta Calculator with the encoded expression
         return f"https://www.meta-calculator.com/?panel-101-equations&data-bounds-xMin=-8&data-bounds-xMax=8&data-bounds-yMin=-11&data-bounds-yMax=11&data-equations-0=%22{encoded_expression}%22&data-rand=undefined&data-hideGrid=false"
 
+
+class InputModal(discord.ui.Modal):
+    def __init__(self, button, view):
+        super().__init__(title="Enter Value")
+        self.button = button
+        self.view = view
+        # Add a text input field to the modal
+        self.value_input = discord.ui.TextInput(label="Enter a number", style=discord.TextStyle.short)
+        self.add_item(self.value_input)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        # Update the button label with the entered value
+        self.button.label = self.value_input.value
+        self.button.disabled = True  # Optionally disable the button after input
+        # Update the message with the new view state
+        await interaction.response.edit_message(view=self.view)
+
+class TableButton(discord.ui.Button):
+    def __init__(self, row, col, label):
+        # Initialize with dynamic labels indicating their purpose
+        super().__init__(label=label, style=discord.ButtonStyle.primary)
+        self.row = row
+        self.col = col
+
+    async def callback(self, interaction: discord.Interaction):
+        # The modal can capture the input value
+        modal = InputModal(button=self, view=self.view)
+        await interaction.response.send_modal(modal)
+
+
+class TableInputView(discord.ui.View):
+    def __init__(self, rows):
+        super().__init__()
+        # Initialize buttons in a grid format based on the number of rows
+        for i in range(rows):
+            # Add a button for X value in column 0
+            self.add_item(TableButton(row=i, col=0, label=f"Input {i}, X"))
+            # Add a button for Y value in column 1
+            self.add_item(TableButton(row=i, col=1, label=f"Input {i}, Y"))
+        # Add a submit button at the end
+        self.add_item(SubmitButton(data=rows))
+
+class ScatterPlotButton(discord.ui.Button):
+    def __init__(self, data):
+        super().__init__(label="Show Scatter Plot with Best Fit", style=discord.ButtonStyle.secondary)
+        self.data = data  # Pass the x_values and y_values
+
+    async def callback(self, interaction: discord.Interaction):
+        if not interaction.response.is_done():
+            await interaction.response.defer()
+        x_values, y_values = self.data
+        # Calculate the line of best fit
+        slope, intercept, r_value, _, _ = linregress(x_values, y_values)
+        line = slope * np.array(x_values) + intercept
+
+        # Generate the plot
+        plt.figure(figsize=(8, 6))
+        plt.scatter(x_values, y_values, color='blue', label='Data Points')
+        plt.plot(x_values, line, color='red', label=f'Best Fit Line: y={slope:.2f}x+{intercept:.2f}')
+        plt.title(f"Scatter Plot with Line of Best Fit\nCorrelation Coefficient: {r_value:.2f}")
+        plt.xlabel('X Values')
+        plt.ylabel('Y Values')
+        plt.legend()
+        plt.grid(True)
+
+        # Save and send the updated plot
+        filename = 'scatter_plot.png'
+        plt.savefig(filename)
+        plt.close()
+
+        # Use followup to send the file after initial interaction has been deferred
+        file = discord.File(filename, filename='scatter_plot.png')
+        await interaction.followup.send(content="Updated to Scatter Plot with Best Fit", file=file)
+        os.remove(filename)
+
+class SubmitButton(discord.ui.Button):
+    def __init__(self, data):
+        super().__init__(label="Submit Table", style=discord.ButtonStyle.success, row=data)
+        self.data = data
+
+    async def callback(self, interaction: discord.Interaction):
+        view = self.view
+        plot_path = self.create_plot(view)
+        x_values, y_values = self.extract_data(view)
+        file = discord.File(plot_path, filename="plot.png")
+        
+        # Add the ScatterPlotButton with the data
+        button_view = discord.ui.View()
+        button_view.add_item(ScatterPlotButton((x_values, y_values)))
+        
+        await interaction.response.send_message(file=file, view=button_view)
+        os.remove(plot_path)
+
+    def extract_data(self, view):
+        x_values = [float(view.children[i * 2].label.split()[-1]) for i in range(self.data)]
+        y_values = [float(view.children[i * 2 + 1].label.split()[-1]) for i in range(self.data)]
+        return x_values, y_values
+
+    def create_plot(self, view):
+        x_values = []
+        y_values = []
+        # Loop through each row and gather x and y values
+        for i in range(self.data):  # 'data' contains the number of rows
+            x_values.append(float(view.children[i * 2].label.split()[-1]))  # x values are in even index positions
+            y_values.append(float(view.children[i * 2 + 1].label.split()[-1]))  # y values are in odd index positions
+
+        plt.figure(figsize=(8, 6))
+        plt.plot(x_values, y_values, 'bo-')  # Plot with blue circle markers connected by lines
+        plt.title("Plot of Data Points")
+        plt.xlabel('X Values')
+        plt.ylabel('Y Values')
+        plt.grid(True)
+        filename = 'plot.png'
+        plt.savefig(filename)
+        plt.close()
+        return filename
 
 # Create the bot client
 class MyClient(discord.Client):
@@ -208,6 +326,48 @@ def format_to_latex(expression):
     # Join all parts into a single string
     return ''.join(formatted_expression)
 
+# Function to plot a triangle
+def plot_triangle(a, b, c):
+    # Calculate the coordinates based on the triangle inequality and angles
+    coords = [(0, 0), (a, 0)]  # Start with two points
+    # Use law of cosines to find the angle between the sides
+    angle = np.arccos((a**2 + b**2 - c**2) / (2 * a * b))
+    # Third vertex coordinates
+    x = b * np.cos(angle)
+    y = b * np.sin(angle)
+    coords.append((x, y))
+    coords.append((0, 0))  # Close the triangle
+    x, y = zip(*coords)
+    plt.figure()
+    plt.plot(x, y, marker='o')
+    plt.fill(x, y, 'b', alpha=0.3)  # Fill with light blue
+    plt.gca().set_aspect('equal', adjustable='box')
+    plt.axis('off')
+
+# Function to plot a circle
+def plot_circle(radius):
+    circle = plt.Circle((0, 0), radius, color='r', fill=False)
+    fig, ax = plt.subplots()
+    ax.add_artist(circle)
+    ax.set_xlim(-radius-1, radius+1)
+    ax.set_ylim(-radius-1, radius+1)
+    ax.set_aspect('equal', adjustable='box')
+    ax.axis('off')
+
+# Function to plot a rectangle
+def plot_rectangle(width, height):
+    rectangle = plt.Rectangle((-width/2, -height/2), width, height, fill=None, color='g')
+    fig, ax = plt.subplots()
+    ax.add_artist(rectangle)
+    ax.set_xlim(-width, width)
+    ax.set_ylim(-height, height)
+    ax.set_aspect('equal', adjustable='box')
+    ax.axis('off')
+
+# Function to plot a square
+def plot_square(side):
+    plot_rectangle(side, side)
+
 @client.tree.command()
 @app_commands.describe(equation="Enter the equation in LaTeX format.")
 async def render(interaction: discord.Interaction, equation: str):
@@ -333,6 +493,45 @@ async def latex_help(interaction: discord.Interaction):
     """Help for formatting and using the LaTeX system"""
     await interaction.response.send_message(HELP_TEXT, ephemeral=True)
 
+@client.tree.command()
+@app_commands.describe(rows="Number of rows for the table.")
+async def input_table(interaction: discord.Interaction, rows: int):
+    """Create a table of input buttons and submit to plot."""
+    await interaction.response.send_message(view=TableInputView(rows), ephemeral=True)
+
+@client.tree.command()
+@app_commands.describe(shape="The shape to draw", side1="Length of the first side or radius")
+@app_commands.choices(shape=[
+    app_commands.Choice(name="triangle", value="triangle"),
+    app_commands.Choice(name="circle", value="circle"),
+    app_commands.Choice(name="rectangle", value="rectangle"),
+    app_commands.Choice(name="square", value="square")
+])
+@app_commands.describe(side2="Length of the second side (optional for triangle, required for rectangle)", 
+                       side3="Length of the third side (only for triangle)")
+async def draw(interaction: discord.Interaction, shape: str, side1: float, side2: float = None, side3: float = None):
+    """Draws a specified shape with given dimensions."""
+    buffer = BytesIO()
+    
+    plt.figure()
+    if shape == "triangle" and side1 and side2 and side3:
+        plot_triangle(side1, side2, side3)
+    elif shape == "circle" and side1:
+        plot_circle(side1)
+    elif shape == "rectangle" and side1 and side2:
+        plot_rectangle(side1, side2)
+    elif shape == "square" and side1:
+        plot_square(side1)
+    else:
+        await interaction.response.send_message("Invalid or incomplete dimensions for the selected shape.", ephemeral=True)
+        return
+
+    plt.savefig(buffer, format='png')
+    buffer.seek(0)
+    plt.close()
+
+    file = discord.File(buffer, filename='shape.png')
+    await interaction.response.send_message(file=file)
 
 # Run the client with the bot token
 client.run(TOKEN)
