@@ -500,33 +500,38 @@ async def input_table(interaction: discord.Interaction, rows: int):
     await interaction.response.send_message(view=TableInputView(rows), ephemeral=True)
 
 @client.tree.command()
-@app_commands.describe(shape="The shape to draw", dimensions="The dimensions of the shape")
-async def draw(interaction: discord.Interaction, shape: str, dimensions: str):
+@app_commands.describe(shape="The shape to draw", side1="Length of the first side or radius")
+@app_commands.choices(shape=[
+    app_commands.Choice(name="triangle", value="triangle"),
+    app_commands.Choice(name="circle", value="circle"),
+    app_commands.Choice(name="rectangle", value="rectangle"),
+    app_commands.Choice(name="square", value="square")
+])
+@app_commands.describe(side2="Length of the second side (optional for triangle, required for rectangle)", 
+                       side3="Length of the third side (only for triangle)")
+async def draw(interaction: discord.Interaction, shape: str, side1: float, side2: float = None, side3: float = None):
     """Draws a specified shape with given dimensions."""
-    await interaction.response.defer(ephemeral=False)
-    dimensions = list(map(float, dimensions.split()))
-    
-    if shape == "triangle" and len(dimensions) == 3:
-        plot_triangle(*dimensions)
-    elif shape == "circle" and len(dimensions) == 1:
-        plot_circle(*dimensions)
-    elif shape == "rectangle" and len(dimensions) == 2:
-        plot_rectangle(*dimensions)
-    elif shape == "square" and len(dimensions) == 1:
-        plot_square(*dimensions)
-    else:
-        await interaction.followup.send("Invalid shape or dimensions. Please check your input and try again.")
-        return
-    
-    # Save plot to a BytesIO buffer
     buffer = BytesIO()
+    
+    plt.figure()
+    if shape == "triangle" and side1 and side2 and side3:
+        plot_triangle(side1, side2, side3)
+    elif shape == "circle" and side1:
+        plot_circle(side1)
+    elif shape == "rectangle" and side1 and side2:
+        plot_rectangle(side1, side2)
+    elif shape == "square" and side1:
+        plot_square(side1)
+    else:
+        await interaction.response.send_message("Invalid or incomplete dimensions for the selected shape.", ephemeral=True)
+        return
+
     plt.savefig(buffer, format='png')
     buffer.seek(0)
     plt.close()
 
-    # Send the image in Discord
     file = discord.File(buffer, filename='shape.png')
-    await interaction.followup.send(file=file)
+    await interaction.response.send_message(file=file)
 
 # Run the client with the bot token
 client.run(TOKEN)
