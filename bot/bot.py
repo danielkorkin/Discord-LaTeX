@@ -54,6 +54,80 @@ class MetaCalculatorButton(discord.ui.View):
         return f"https://www.meta-calculator.com/?panel-101-equations&data-bounds-xMin=-8&data-bounds-xMax=8&data-bounds-yMin=-11&data-bounds-yMax=11&data-equations-0=%22{encoded_expression}%22&data-rand=undefined&data-hideGrid=false"
 
 
+class InputModal(discord.ui.Modal):
+    def __init__(self, button, view):
+        super().__init__(title="Enter Value")
+        self.button = button
+        self.view = view
+        # Add a text input field to the modal
+        self.value_input = discord.ui.TextInput(label="Enter a number", style=discord.TextStyle.short)
+        self.add_item(self.value_input)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        # Update the button label with the entered value
+        self.button.label = self.value_input.value
+        self.button.disabled = True  # Optionally disable the button after input
+        # Update the message with the new view state
+        await interaction.response.edit_message(view=self.view)
+
+class TableButton(discord.ui.Button):
+    def __init__(self, row, col, label):
+        # Initialize with dynamic labels indicating their purpose
+        super().__init__(label=label, style=discord.ButtonStyle.primary)
+        self.row = row
+        self.col = col
+
+    async def callback(self, interaction: discord.Interaction):
+        # The modal can capture the input value
+        modal = InputModal(button=self, view=self.view)
+        await interaction.response.send_modal(modal)
+
+
+class TableInputView(discord.ui.View):
+    def __init__(self, rows):
+        super().__init__()
+        # Initialize buttons in a grid format based on the number of rows
+        for i in range(rows):
+            # Add a button for X value in column 0
+            self.add_item(TableButton(row=i, col=0, label=f"Input {i}, X"))
+            # Add a button for Y value in column 1
+            self.add_item(TableButton(row=i, col=1, label=f"Input {i}, Y"))
+        # Add a submit button at the end
+        self.add_item(SubmitButton(data=rows))
+
+
+
+class SubmitButton(discord.ui.Button):
+    def __init__(self, data):
+        super().__init__(label="Submit Table", style=discord.ButtonStyle.success, row=data)
+        self.data = data
+
+    async def callback(self, interaction: discord.Interaction):
+        view = self.view
+        plot_path = self.create_plot(view)
+        file = discord.File(plot_path, filename="plot.png")
+        await interaction.response.send_message(file=file)
+        os.remove(plot_path)
+
+    def create_plot(self, view):
+        x_values = []
+        y_values = []
+        # Loop through each row and gather x and y values
+        for i in range(self.data):  # 'data' contains the number of rows
+            x_values.append(float(view.children[i * 2].label.split()[-1]))  # x values are in even index positions
+            y_values.append(float(view.children[i * 2 + 1].label.split()[-1]))  # y values are in odd index positions
+
+        plt.figure(figsize=(8, 6))
+        plt.plot(x_values, y_values, 'bo-')  # Plot with blue circle markers connected by lines
+        plt.title("Plot of Data Points")
+        plt.xlabel('X Values')
+        plt.ylabel('Y Values')
+        plt.grid(True)
+        filename = 'plot.png'
+        plt.savefig(filename)
+        plt.close()
+        return filename
+
 # Create the bot client
 class MyClient(discord.Client):
     def __init__(self, *, intents: discord.Intents):
@@ -333,6 +407,11 @@ async def latex_help(interaction: discord.Interaction):
     """Help for formatting and using the LaTeX system"""
     await interaction.response.send_message(HELP_TEXT, ephemeral=True)
 
+@client.tree.command()
+@app_commands.describe(rows="Number of rows for the table.")
+async def input_table(interaction: discord.Interaction, rows: int):
+    """Create a table of input buttons and submit to plot."""
+    await interaction.response.send_message(view=TableInputView(rows), ephemeral=True)
 
 # Run the client with the bot token
 client.run(TOKEN)
