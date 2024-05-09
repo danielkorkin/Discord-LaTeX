@@ -11,6 +11,7 @@ import sympy as sp
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.stats import linregress
+from io import BytesIO
 # AI
 import google.generativeai as genai
 
@@ -325,6 +326,48 @@ def format_to_latex(expression):
     # Join all parts into a single string
     return ''.join(formatted_expression)
 
+# Function to plot a triangle
+def plot_triangle(a, b, c):
+    # Calculate the coordinates based on the triangle inequality and angles
+    coords = [(0, 0), (a, 0)]  # Start with two points
+    # Use law of cosines to find the angle between the sides
+    angle = np.arccos((a**2 + b**2 - c**2) / (2 * a * b))
+    # Third vertex coordinates
+    x = b * np.cos(angle)
+    y = b * np.sin(angle)
+    coords.append((x, y))
+    coords.append((0, 0))  # Close the triangle
+    x, y = zip(*coords)
+    plt.figure()
+    plt.plot(x, y, marker='o')
+    plt.fill(x, y, 'b', alpha=0.3)  # Fill with light blue
+    plt.gca().set_aspect('equal', adjustable='box')
+    plt.axis('off')
+
+# Function to plot a circle
+def plot_circle(radius):
+    circle = plt.Circle((0, 0), radius, color='r', fill=False)
+    fig, ax = plt.subplots()
+    ax.add_artist(circle)
+    ax.set_xlim(-radius-1, radius+1)
+    ax.set_ylim(-radius-1, radius+1)
+    ax.set_aspect('equal', adjustable='box')
+    ax.axis('off')
+
+# Function to plot a rectangle
+def plot_rectangle(width, height):
+    rectangle = plt.Rectangle((-width/2, -height/2), width, height, fill=None, color='g')
+    fig, ax = plt.subplots()
+    ax.add_artist(rectangle)
+    ax.set_xlim(-width, width)
+    ax.set_ylim(-height, height)
+    ax.set_aspect('equal', adjustable='box')
+    ax.axis('off')
+
+# Function to plot a square
+def plot_square(side):
+    plot_rectangle(side, side)
+
 @client.tree.command()
 @app_commands.describe(equation="Enter the equation in LaTeX format.")
 async def render(interaction: discord.Interaction, equation: str):
@@ -455,6 +498,35 @@ async def latex_help(interaction: discord.Interaction):
 async def input_table(interaction: discord.Interaction, rows: int):
     """Create a table of input buttons and submit to plot."""
     await interaction.response.send_message(view=TableInputView(rows), ephemeral=True)
+
+@client.tree.command()
+@app_commands.describe(shape="The shape to draw", dimensions="The dimensions of the shape")
+async def draw(interaction: discord.Interaction, shape: str, dimensions: str):
+    """Draws a specified shape with given dimensions."""
+    await interaction.response.defer(ephemeral=False)
+    dimensions = list(map(float, dimensions.split()))
+    
+    if shape == "triangle" and len(dimensions) == 3:
+        plot_triangle(*dimensions)
+    elif shape == "circle" and len(dimensions) == 1:
+        plot_circle(*dimensions)
+    elif shape == "rectangle" and len(dimensions) == 2:
+        plot_rectangle(*dimensions)
+    elif shape == "square" and len(dimensions) == 1:
+        plot_square(*dimensions)
+    else:
+        await interaction.followup.send("Invalid shape or dimensions. Please check your input and try again.")
+        return
+    
+    # Save plot to a BytesIO buffer
+    buffer = BytesIO()
+    plt.savefig(buffer, format='png')
+    buffer.seek(0)
+    plt.close()
+
+    # Send the image in Discord
+    file = discord.File(buffer, filename='shape.png')
+    await interaction.followup.send(file=file)
 
 # Run the client with the bot token
 client.run(TOKEN)
