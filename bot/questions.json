@@ -1,24 +1,162 @@
 {
-    "easy": [
+    "Algebra 1": [
         {
-            "question": "What is 2 + 2?",
-            "options": {"a": "3", "b": "4", "c": "5", "d": "6"},
-            "answer": "b",
-            "explanation": "2 + 2 equals 4."
+            "question": "Solve for x: 2x + 3 = 7",
+            "options": {"a": "x = 2", "b": "x = 5", "c": "x = 3", "d": "x = 1"},
+            "answer": "a",
+            "explanation": "Subtract 3 from both sides and then divide by 2 to solve for x."
         },
         {
-            "question": "What is 5 - 3?",
-            "options": {"a": "2", "b": "3", "c": "4", "d": "5"},
+            "question": "Simplify: 3(2x - 5) + 4",
+            "options": {"a": "6x - 11", "b": "6x + 19", "c": "6x - 15", "d": "5x - 11"},
             "answer": "a",
-            "explanation": "5 - 3 equals 2."
+            "explanation": "Distribute and combine like terms to simplify."
+        },
+        {
+            "question": "Factor: x^2 - 9",
+            "options": {"a": "(x - 3)(x + 3)", "b": "(x - 3)^2", "c": "(x + 3)^2", "d": "x^2 - 9 cannot be factored"},
+            "answer": "a",
+            "explanation": "x^2 - 9 is a difference of squares and factors as (x - 3)(x + 3)."
+        },
+        {
+            "question": "What is the value of x if 5x = 25?",
+            "options": {"a": "5", "b": "30", "c": "20", "d": "1"},
+            "answer": "a",
+            "explanation": "Divide both sides by 5 to solve for x."
+        },
+        {
+            "question": "If f(x) = 2x + 1, find f(3).",
+            "options": {"a": "5", "b": "6", "c": "7", "d": "8"},
+            "answer": "c",
+            "explanation": "Substitute x with 3 in the function and solve."
         }
     ],
-    "hard": [
+    "Algebra 2": [
         {
-            "question": "What is the integral of x^2 dx?",
-            "options": {"a": "x^3/3 + C", "b": "2x", "c": "x^2/2", "d": "None of the above"},
+            "question": "Solve for x: x^2 - 4x + 4 = 0",
+            "options": {"a": "x = 2", "b": "x = 0", "c": "x = 1", "d": "x = -2"},
             "answer": "a",
-            "explanation": "The integral of x^2 with respect to x is x^3/3 + C."
+            "explanation": "Factor the quadratic equation to find x."
+        },
+        {
+            "question": "What is the vertex of the parabola given by the equation y = (x - 2)^2 + 3?",
+            "options": {"a": "(2, 3)", "b": "(3, 2)", "c": "(-2, 3)", "d": "(2, -3)"},
+            "answer": "a",
+            "explanation": "The vertex form of a parabola is y = (x - h)^2 + k, where (h, k) is the vertex."
+        },
+        {
+            "question": "Expand: (x + 2)(x - 3)",
+            "options": {"a": "x^2 - x - 6", "b": "x^2 + x - 6", "c": "x^2 + 5x + 6", "d": "x^2 - 5x + 6"},
+            "answer": "a",
+            "explanation": "Use the FOIL method to expand the expression."
+        },
+        {
+            "question": "Simplify the expression: (x^3y^2)^2",
+            "options": {"a": "x^6y^4", "b": "x^5y^4", "c": "x^6y^3", "d": "x^5y^3"},
+            "answer": "a",
+            "explanation": "Apply the power of a power property to simplify the expression."
+        },
+        {
+            "question": "Solve for x in the equation: log(x) + log(2) = 3",
+            "options": {"a": "x = 100", "b": "x = 200", "c": "x = 50", "d": "x = 150"},
+            "answer": "a",
+            "explanation": "Combine logs and solve the resulting equation for x."
+        }
+    ],
+    "Geometry": [
+        {
+            "question": "What is the area of a triangle with base 4 cm and height 3 cm?",
+            "options": {"a": "6 cm^2", "b": "12 cm^2", "c": "7 cm^2", "d": "8 cm^2"},
+            "answer": "a",
+            "explanation": "Area of a triangle = 0.5 * base * height."
+        },
+        {
+            "question": "What type of triangle has angles of 45°, 45°, and 90°?",
+            "options": {"a": "Isosceles", "b": "Equilateral", "c": "Right", "d": "Scalene"},
+            "answer": "c",
+            "explanation": "A triangle with a 90° angle is a right triangle, and if the other two angles are equal, it is also isosceles."
+        },
+        {
+            "question": "Calculate the perimeter of a rectangle with length 5 cm and width 3 cm.",
+            "options": {"a": "16 cm", "b": "15 cm", "c": "14 cm", "d": "13 cm"},
+            "answer": "a",
+            "explanation": "Perimeter of a rectangle = 2*(length + width)."
+        },
+        {
+            "question": "What is the measure of an exterior angle of a regular pentagon?",
+            "options": {"a": "72°", "b": "36°", "c": "60°", "d": "108°"},
+            "answer": "a",
+            "explanation": "The exterior angle of a regular pentagon is 360° divided by the number of sides."
+        },
+        {
+            "question": "What is the volume of a cube with side length 4 cm?",
+            "options": {"a": "64 cm^3", "b": "48 cm^3", "c": "32 cm^3", "d": "16 cm^3"},
+            "answer": "a",
+            "explanation": "Volume of a cube = side^3."
+        }
+    ],
+    "Statistics": [
+        {
+            "question": "What is the mean of the data set [4, 8, 6, 5, 3]?",
+            "options": {"a": "5", "b": "6", "c": "4", "d": "7"},
+            "answer": "a",
+            "explanation": "The mean is the average of all numbers in the data set."
+        },
+        {
+            "question": "What is the mode of the data set [2, 4, 4, 6, 8]?",
+            "options": {"a": "4", "b": "6", "c": "8", "d": "2"},
+            "answer": "a",
+            "explanation": "The mode is the number that appears most frequently in the data set."
+        },
+        {
+            "question": "Calculate the median of the data set [3, 7, 9, 6]",
+            "options": {"a": "6.5", "b": "7", "c": "6", "d": "7.5"},
+            "answer": "a",
+            "explanation": "The median is the middle value when the data set is ordered, which is the average of the two middle numbers in this case."
+        },
+        {
+            "question": "What is the range of the data set [10, 15, 20, 25, 30]?",
+            "options": {"a": "20", "b": "25", "c": "15", "d": "10"},
+            "answer": "a",
+            "explanation": "The range is the difference between the highest and lowest values in the data set."
+        },
+        {
+            "question": "If the probability of an event is 0.20, what is its odds?",
+            "options": {"a": "1 to 4", "b": "4 to 1", "c": "1 to 5", "d": "5 to 1"},
+            "answer": "c",
+            "explanation": "Odds are calculated as the ratio of the probability of the event happening to it not happening."
+        }
+    ],
+    "Calculus": [
+        {
+            "question": "What is the derivative of 3x^2?",
+            "options": {"a": "6x", "b": "9x", "c": "6", "d": "9"},
+            "answer": "a",
+            "explanation": "The derivative of x^n is nx^(n-1)."
+        },
+        {
+            "question": "What is the integral of 3x^2 dx?",
+            "options": {"a": "x^3 + C", "b": "x^2 + C", "c": "3x^3 + C", "d": "x^3/3 + C"},
+            "answer": "c",
+            "explanation": "The integral of x^n dx is x^(n+1)/(n+1) + C."
+        },
+        {
+            "question": "Calculate the limit as x approaches 0 for the function (sin x)/x.",
+            "options": {"a": "1", "b": "0", "c": "Infinity", "d": "Does not exist"},
+            "answer": "a",
+            "explanation": "The limit of (sin x)/x as x approaches 0 is 1."
+        },
+        {
+            "question": "Find the derivative of e^x.",
+            "options": {"a": "e^x", "b": "x * e^x", "c": "e^(x-1)", "d": "1/e^x"},
+            "answer": "a",
+            "explanation": "The derivative of e^x is e^x."
+        },
+        {
+            "question": "What is the second derivative of x^3?",
+            "options": {"a": "6x", "b": "3x^2", "c": "9x^2", "d": "6x^2"},
+            "answer": "a",
+            "explanation": "The second derivative of x^3 is 6x."
         }
     ]
 }

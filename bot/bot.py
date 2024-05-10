@@ -185,29 +185,25 @@ class QuizButton(discord.ui.Button):
         self.explanation = explanation
 
     async def callback(self, interaction: discord.Interaction):
-        view = self.view  # The view is the MathQuizView
-
-        # Change button color based on correctness
+        view = self.view
         if self.option_key == view.current_question['answer']:
             self.style = discord.ButtonStyle.success
             view.score += 1
             response = f"Correct! {self.explanation}"
         else:
             self.style = discord.ButtonStyle.danger
-            response = f"Incorrect! The correct answer was '{view.current_question['answer'].upper()}'. {self.explanation}"
+            response = f"Incorrect! Correct answer was '{view.current_question['answer'].upper()}'. {self.explanation}"
 
-        # Disable all buttons after a response
         for button in view.children:
             button.disabled = True
-        
-        await interaction.response.edit_message(view=view)
+        await interaction.response.edit_message(content=response, view=view)
 
-        # Delay to let users see the result before proceeding
-        await asyncio.sleep(3)
+        await asyncio.sleep(3)  # Optional pause for showing the result
+
         if view.index + 1 < len(view.questions):
             view.index += 1
             view.current_question = view.questions[view.index]
-            view.create_question_buttons()  # Refresh buttons for the new question
+            view.create_question_buttons()
             await interaction.edit_original_response(content=view.current_question['question'], view=view)
         else:
             await interaction.edit_original_response(content=f"Quiz completed! Your score: {view.score}/{len(view.questions)}", view=None)
@@ -220,46 +216,20 @@ class MathQuizView(discord.ui.View):
         self.index = 0
         self.score = 0
         self.current_question = questions[0]
-        self.message = None
-        self.timeout = 30  # Timeout in seconds
-        self.start_time = time.time()  # Initialize start_time before calling create_question_buttons
         self.create_question_buttons()
 
     def create_question_buttons(self):
         self.clear_items()
         for option_key, value in self.current_question['options'].items():
-            self.add_item(QuizButton(label=f"{option_key.upper()}: {value}", option_key=option_key, correct=self.current_question['answer'], explanation=self.current_question['explanation']))
-        # Add the timestamp for when the question will time out
-        self.timeout_display = f"Answer by: <t:{int(self.start_time + self.timeout)}:R>"
-        if self.message:
-            asyncio.create_task(self.update_message())
+            button = QuizButton(
+                label=f"{option_key.upper()}: {value}",
+                option_key=option_key,
+                correct=(option_key == self.current_question['answer']),
+                explanation=self.current_question['explanation']
+            )
+            self.add_item(button)
 
-    async def update_message(self):
-        """Update the question message with the timeout."""
-        await asyncio.sleep(1)  # Wait for the view to be fully initialized and sent
-        await self.message.edit(content=f"{self.current_question['question']} {self.timeout_display}", view=self)
 
-    @discord.ui.button(label="Next", style=discord.ButtonStyle.green, row=4)
-    async def next_question(self, interaction: discord.Interaction, button: discord.ui.Button):
-        self.handle_timeout(interaction)
-
-    async def handle_timeout(self, interaction=None):
-        """Handle the timeout or next button press."""
-        if self.index + 1 < len(self.questions):
-            self.index += 1
-            self.current_question = self.questions[self.index]
-            self.create_question_buttons()
-            self.start_time = time.time()  # Reset start time for new question
-            if interaction:
-                await interaction.response.edit_message(content=f"{self.current_question['question']} {self.timeout_display}", view=self)
-        else:
-            if interaction:
-                await interaction.response.edit_message(content="Quiz completed!", view=None)
-            self.stop()
-
-    async def on_timeout(self):
-        if self.message:
-            await self.handle_timeout()
 # Create the bot client
 class MyClient(discord.Client):
     def __init__(self, *, intents: discord.Intents):
@@ -458,7 +428,7 @@ def plot_square(side):
 
 def get_dynamic_time():
     # Current time in epoch seconds
-    epoch_time = int(time.time())
+    epoch_time = int(time.time()) + 30
     # Convert to Discord timestamp tag
     return f"<t:{epoch_time}:R>"
 
@@ -628,14 +598,21 @@ async def draw(interaction: discord.Interaction, shape: str, side1: float, side2
     await interaction.response.send_message(file=file)
 
 @client.tree.command()
-async def start_quiz(interaction: discord.Interaction, number_of_questions: int, difficulty: str):
-    if difficulty not in questions:
-        await interaction.response.send_message("Difficulty level not found!", ephemeral=True)
+@app_commands.choices(topic=[
+    app_commands.Choice(name="Algebra 1", value="Algebra 1"),
+    app_commands.Choice(name="Algebra 2", value="Algebra 2"),
+    app_commands.Choice(name="Geometry", value="Geometry"),
+    app_commands.Choice(name="Statistics", value="Statistics"),
+    app_commands.Choice(name="Calculus", value="Calculus")
+])
+async def start_quiz(interaction: discord.Interaction, number_of_questions: app_commands.Range[int, 1, 5], topic: str):
+    if topic not in questions:
+        await interaction.response.send_message("Topic not found!", ephemeral=True)
         return
 
-    selected_questions = random.sample(questions[difficulty], min(number_of_questions, len(questions[difficulty])))
+    selected_questions = random.sample(questions[topic], min(number_of_questions, len(questions[topic])))
     view = MathQuizView(selected_questions)
-    await interaction.response.send_message(content=view.current_question['question'], view=view)
+    await interaction.response.send_message(content=f"{view.current_question['question']}", view=view)
 
 # Run the client with the bot token
 client.run(TOKEN)
