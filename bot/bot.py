@@ -605,7 +605,10 @@ async def draw(interaction: discord.Interaction, shape: str, side1: float, side2
     app_commands.Choice(name="Statistics", value="Statistics"),
     app_commands.Choice(name="Calculus", value="Calculus")
 ])
+@app_commands.describe(number_of_questions="Number of questions in the Quiz")
+@app_commands.describe(topic="Topic that will be covered in the quiz")
 async def start_quiz(interaction: discord.Interaction, number_of_questions: app_commands.Range[int, 1, 5], topic: str):
+    """Creates a math quiz to test your knowledge on a topic"""
     if topic not in questions:
         await interaction.response.send_message("Topic not found!", ephemeral=True)
         return
