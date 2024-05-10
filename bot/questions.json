@@ -1,0 +1,24 @@
+{
+    "easy": [
+        {
+            "question": "What is 2 + 2?",
+            "options": {"a": "3", "b": "4", "c": "5", "d": "6"},
+            "answer": "b",
+            "explanation": "2 + 2 equals 4."
+        },
+        {
+            "question": "What is 5 - 3?",
+            "options": {"a": "2", "b": "3", "c": "4", "d": "5"},
+            "answer": "a",
+            "explanation": "5 - 3 equals 2."
+        }
+    ],
+    "hard": [
+        {
+            "question": "What is the integral of x^2 dx?",
+            "options": {"a": "x^3/3 + C", "b": "2x", "c": "x^2/2", "d": "None of the above"},
+            "answer": "a",
+            "explanation": "The integral of x^2 with respect to x is x^3/3 + C."
+        }
+    ]
+}

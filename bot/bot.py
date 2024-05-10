@@ -12,6 +12,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy.stats import linregress
 from io import BytesIO
+import json
+import random
+
 # AI
 import google.generativeai as genai
 
@@ -39,6 +42,9 @@ genai.configure(api_key=GOOGLE_API_KEY)
 model = genai.GenerativeModel("gemini-1.0-pro")
 prompt = "Provide just the LaTeX function for the following equation/expression, even if it is incorrect, follow strict LaTeX formatting however do not surround the raw equation/expression with anything "
 
+with open('bot/questions.json', 'r') as f:
+    questions = json.load(f)
+
 class MetaCalculatorButton(discord.ui.View):
     def __init__(self, expression):
         super().__init__()
@@ -54,7 +60,6 @@ class MetaCalculatorButton(discord.ui.View):
         encoded_expression = quote(expression)
         # Return the full URL for Meta Calculator with the encoded expression
         return f"https://www.meta-calculator.com/?panel-101-equations&data-bounds-xMin=-8&data-bounds-xMax=8&data-bounds-yMin=-11&data-bounds-yMax=11&data-equations-0=%22{encoded_expression}%22&data-rand=undefined&data-hideGrid=false"
-
 
 class InputModal(discord.ui.Modal):
     def __init__(self, button, view):
@@ -83,7 +88,6 @@ class TableButton(discord.ui.Button):
         # The modal can capture the input value
         modal = InputModal(button=self, view=self.view)
         await interaction.response.send_modal(modal)
-
 
 class TableInputView(discord.ui.View):
     def __init__(self, rows):
@@ -171,6 +175,40 @@ class SubmitButton(discord.ui.Button):
         plt.savefig(filename)
         plt.close()
         return filename
+
+class QuizButton(discord.ui.Button):
+    def __init__(self, label, option_key, correct, explanation):
+        super().__init__(label=label, style=discord.ButtonStyle.secondary)
+        self.option_key = option_key
+        self.correct = correct
+        self.explanation = explanation
+
+    async def callback(self, interaction: discord.Interaction):
+        # Disable all buttons after a choice has been made
+        for item in self.view.children:
+            item.disabled = True
+        
+        if self.option_key == self.correct:
+            self.style = discord.ButtonStyle.success
+            content = f"Correct! {self.explanation}"
+        else:
+            self.style = discord.ButtonStyle.danger
+            content = f"Incorrect! The correct answer was '{self.correct.upper()}'. {self.explanation}"
+        
+        await interaction.response.edit_message(view=self.view, content=content)
+
+class MathQuizView(discord.ui.View):
+    def __init__(self, question_data):
+        super().__init__()
+        self.question = question_data['question']
+        self.options = question_data['options']
+        self.answer = question_data['answer']
+        self.explanation = question_data['explanation']
+
+        for key, value in self.options.items():
+            correct = 'success' if key == self.answer else 'danger'
+            self.add_item(QuizButton(label=f"{key.upper()}: {value}", option_key=key, correct=self.answer, explanation=self.explanation))
+
 
 # Create the bot client
 class MyClient(discord.Client):
@@ -532,6 +570,19 @@ async def draw(interaction: discord.Interaction, shape: str, side1: float, side2
 
     file = discord.File(buffer, filename='shape.png')
     await interaction.response.send_message(file=file)
+
+@client.tree.command()
+@app_commands.describe(number_of_questions="How many questions in the quiz", difficulty="Choose difficulty: easy or hard")
+async def start_quiz(interaction: discord.Interaction, number_of_questions: int, difficulty: str):
+    if difficulty not in questions:
+        await interaction.response.send_message("Difficulty level not found!", ephemeral=True)
+        return
+
+    selected_questions = random.sample(questions[difficulty], number_of_questions)
+    for question_data in selected_questions:
+        view = MathQuizView(question_data)
+        await interaction.channel.send(content=question_data['question'], view=view)
+
 
 # Run the client with the bot token
 client.run(TOKEN)
