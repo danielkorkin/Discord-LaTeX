@@ -220,14 +220,46 @@ class MathQuizView(discord.ui.View):
         self.index = 0
         self.score = 0
         self.current_question = questions[0]
+        self.message = None
+        self.timeout = 30  # Timeout in seconds
+        self.start_time = time.time()  # Initialize start_time before calling create_question_buttons
         self.create_question_buttons()
 
     def create_question_buttons(self):
         self.clear_items()
         for option_key, value in self.current_question['options'].items():
             self.add_item(QuizButton(label=f"{option_key.upper()}: {value}", option_key=option_key, correct=self.current_question['answer'], explanation=self.current_question['explanation']))
+        # Add the timestamp for when the question will time out
+        self.timeout_display = f"Answer by: <t:{int(self.start_time + self.timeout)}:R>"
+        if self.message:
+            asyncio.create_task(self.update_message())
 
+    async def update_message(self):
+        """Update the question message with the timeout."""
+        await asyncio.sleep(1)  # Wait for the view to be fully initialized and sent
+        await self.message.edit(content=f"{self.current_question['question']} {self.timeout_display}", view=self)
 
+    @discord.ui.button(label="Next", style=discord.ButtonStyle.green, row=4)
+    async def next_question(self, interaction: discord.Interaction, button: discord.ui.Button):
+        self.handle_timeout(interaction)
+
+    async def handle_timeout(self, interaction=None):
+        """Handle the timeout or next button press."""
+        if self.index + 1 < len(self.questions):
+            self.index += 1
+            self.current_question = self.questions[self.index]
+            self.create_question_buttons()
+            self.start_time = time.time()  # Reset start time for new question
+            if interaction:
+                await interaction.response.edit_message(content=f"{self.current_question['question']} {self.timeout_display}", view=self)
+        else:
+            if interaction:
+                await interaction.response.edit_message(content="Quiz completed!", view=None)
+            self.stop()
+
+    async def on_timeout(self):
+        if self.message:
+            await self.handle_timeout()
 # Create the bot client
 class MyClient(discord.Client):
     def __init__(self, *, intents: discord.Intents):
