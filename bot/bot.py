@@ -187,24 +187,27 @@ class QuizButton(discord.ui.Button):
     async def callback(self, interaction: discord.Interaction):
         view = self.view  # The view is the MathQuizView
 
-        # Disable all buttons after a response
-        for button in view.children:
-            button.disabled = True
-        await interaction.response.edit_message(view=view)
-
-        # Check if the answer was correct and respond
+        # Change button color based on correctness
         if self.option_key == view.current_question['answer']:
+            self.style = discord.ButtonStyle.success
             view.score += 1
             response = f"Correct! {self.explanation}"
         else:
+            self.style = discord.ButtonStyle.danger
             response = f"Incorrect! The correct answer was '{view.current_question['answer'].upper()}'. {self.explanation}"
 
-        # Update message after delay to show response and handle quiz progression
+        # Disable all buttons after a response
+        for button in view.children:
+            button.disabled = True
+        
+        await interaction.response.edit_message(view=view)
+
+        # Delay to let users see the result before proceeding
         await asyncio.sleep(3)
         if view.index + 1 < len(view.questions):
             view.index += 1
             view.current_question = view.questions[view.index]
-            view.create_question_buttons()
+            view.create_question_buttons()  # Refresh buttons for the new question
             await interaction.edit_original_response(content=view.current_question['question'], view=view)
         else:
             await interaction.edit_original_response(content=f"Quiz completed! Your score: {view.score}/{len(view.questions)}", view=None)
