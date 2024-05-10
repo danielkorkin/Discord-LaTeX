@@ -14,6 +14,7 @@ from scipy.stats import linregress
 from io import BytesIO
 import json
 import random
+import asyncio
 
 # AI
 import google.generativeai as genai
@@ -40,7 +41,7 @@ MY_GUILD = discord.Object(id=GUILD_ID)  # Replace with your guild ID
 # AI Config
 genai.configure(api_key=GOOGLE_API_KEY)
 model = genai.GenerativeModel("gemini-1.0-pro")
-prompt = "Provide just the LaTeX function for the following equation/expression, even if it is incorrect, follow strict LaTeX formatting however do not surround the raw equation/expression with anything "
+prompt = "Provide just the LaTeX function for the following equation/expression, even if it is incorrect, follow strict LaTeX formatting"
 
 with open('bot/questions.json', 'r') as f:
     questions = json.load(f)
@@ -184,30 +185,44 @@ class QuizButton(discord.ui.Button):
         self.explanation = explanation
 
     async def callback(self, interaction: discord.Interaction):
-        # Disable all buttons after a choice has been made
-        for item in self.view.children:
-            item.disabled = True
-        
-        if self.option_key == self.correct:
-            self.style = discord.ButtonStyle.success
-            content = f"Correct! {self.explanation}"
+        view = self.view  # The view is the MathQuizView
+
+        # Disable all buttons after a response
+        for button in view.children:
+            button.disabled = True
+        await interaction.response.edit_message(view=view)
+
+        # Check if the answer was correct and respond
+        if self.option_key == view.current_question['answer']:
+            view.score += 1
+            response = f"Correct! {self.explanation}"
         else:
-            self.style = discord.ButtonStyle.danger
-            content = f"Incorrect! The correct answer was '{self.correct.upper()}'. {self.explanation}"
-        
-        await interaction.response.edit_message(view=self.view, content=content)
+            response = f"Incorrect! The correct answer was '{view.current_question['answer'].upper()}'. {self.explanation}"
+
+        # Update message after delay to show response and handle quiz progression
+        await asyncio.sleep(3)
+        if view.index + 1 < len(view.questions):
+            view.index += 1
+            view.current_question = view.questions[view.index]
+            view.create_question_buttons()
+            await interaction.edit_original_response(content=view.current_question['question'], view=view)
+        else:
+            await interaction.edit_original_response(content=f"Quiz completed! Your score: {view.score}/{len(view.questions)}", view=None)
+
 
 class MathQuizView(discord.ui.View):
-    def __init__(self, question_data):
+    def __init__(self, questions):
         super().__init__()
-        self.question = question_data['question']
-        self.options = question_data['options']
-        self.answer = question_data['answer']
-        self.explanation = question_data['explanation']
+        self.questions = questions
+        self.index = 0
+        self.score = 0
+        self.current_question = questions[0]
+        self.create_question_buttons()
 
-        for key, value in self.options.items():
-            correct = 'success' if key == self.answer else 'danger'
-            self.add_item(QuizButton(label=f"{key.upper()}: {value}", option_key=key, correct=self.answer, explanation=self.explanation))
+    def create_question_buttons(self):
+        self.clear_items()
+        for option_key, value in self.current_question['options'].items():
+            self.add_item(QuizButton(label=f"{option_key.upper()}: {value}", option_key=option_key, correct=self.current_question['answer'], explanation=self.current_question['explanation']))
 
 
 # Create the bot client
@@ -406,6 +421,12 @@ def plot_rectangle(width, height):
 def plot_square(side):
     plot_rectangle(side, side)
 
+def get_dynamic_time():
+    # Current time in epoch seconds
+    epoch_time = int(time.time())
+    # Convert to Discord timestamp tag
+    return f"<t:{epoch_time}:R>"
+
 @client.tree.command()
 @app_commands.describe(equation="Enter the equation in LaTeX format.")
 async def render(interaction: discord.Interaction, equation: str):
@@ -572,17 +593,14 @@ async def draw(interaction: discord.Interaction, shape: str, side1: float, side2
     await interaction.response.send_message(file=file)
 
 @client.tree.command()
-@app_commands.describe(number_of_questions="How many questions in the quiz", difficulty="Choose difficulty: easy or hard")
 async def start_quiz(interaction: discord.Interaction, number_of_questions: int, difficulty: str):
     if difficulty not in questions:
         await interaction.response.send_message("Difficulty level not found!", ephemeral=True)
         return
 
-    selected_questions = random.sample(questions[difficulty], number_of_questions)
-    for question_data in selected_questions:
-        view = MathQuizView(question_data)
-        await interaction.channel.send(content=question_data['question'], view=view)
-
+    selected_questions = random.sample(questions[difficulty], min(number_of_questions, len(questions[difficulty])))
+    view = MathQuizView(selected_questions)
+    await interaction.response.send_message(content=view.current_question['question'], view=view)
 
 # Run the client with the bot token
 client.run(TOKEN)
