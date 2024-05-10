@@ -1,33 +1,40 @@
-name: Pre-commit
+name: Pre-commit Workflow
 
 on:
+  pull_request:
   push:
     branches:
       - main
-      - master
-  pull_request:
+      - 'test-me-*'
 
 jobs:
-  pre-commit:
+  main:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: [3.8, 3.9, 3.11]
-    
     steps:
-      - uses: actions/checkout@v3
-      - name: Set up Python ${{ matrix.python-version }}
+      - name: Check out code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: ${{ matrix.python-version }}
-      - name: Install pre-commit
-        run: pip install pre-commit
-      - name: Run pre-commit
-        run: pre-commit run --all-files
-      - name: Cache the pre-commit environment
-        uses: actions/cache@v2
-        with:
-          path: ~/.cache/pre-commit
-          key: ${{ runner.os }}-precommit-${{ hashFiles('.pre-commit-config.yaml') }}-${{ matrix.python-version }}
-          restore-keys: |
-            ${{ runner.os }}-precommit-${{ matrix.python-version }}-
+          python-version: 3.x
+
+      - name: Install and run pre-commit
+        uses: pre-commit/action@v3.0.1
+
+      - name: pre-commit.ci autofix PRs (Lite Version)
+        uses: pre-commit-ci/lite-action@v1.0.2
+        if: always()  # Ensures this step always runs, even if previous steps fail.
+
+# Configuration for pre-commit.ci in the repository's .pre-commit-config.yaml
+ci:
+  autofix_commit_msg: |
+    [pre-commit.ci] auto fixes from pre-commit.com hooks
+
+    For more information, see https://pre-commit.ci
+  autofix_prs: true
+  autoupdate_branch: ''  # Updates go to the default branch
+  autoupdate_commit_msg: '[pre-commit.ci] pre-commit autoupdate'
+  autoupdate_schedule: weekly
+  skip: []  # List any hooks you want to skip
+  submodules: false  # Set to true to check out submodules recursively
