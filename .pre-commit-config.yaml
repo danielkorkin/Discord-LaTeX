@@ -1,0 +1,40 @@
+name: Pre-commit Workflow
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - 'test-me-*'
+
+jobs:
+  main:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.x
+
+      - name: Install and run pre-commit
+        uses: pre-commit/action@v3.0.1
+
+      - name: pre-commit.ci autofix PRs (Lite Version)
+        uses: pre-commit-ci/lite-action@v1.0.2
+        if: always()  # Ensures this step always runs, even if previous steps fail.
+
+# Configuration for pre-commit.ci in the repository's .pre-commit-config.yaml
+ci:
+  autofix_commit_msg: |
+    [pre-commit.ci] auto fixes from pre-commit.com hooks
+
+    For more information, see https://pre-commit.ci
+  autofix_prs: true
+  autoupdate_branch: ''  # Updates go to the default branch
+  autoupdate_commit_msg: '[pre-commit.ci] pre-commit autoupdate'
+  autoupdate_schedule: weekly
+  skip: []  # List any hooks you want to skip
+  submodules: false  # Set to true to check out submodules recursively
