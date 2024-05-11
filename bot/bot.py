@@ -16,6 +16,10 @@ import json
 import random
 import asyncio
 
+
+import pytz
+from datetime import datetime, timedelta
+
 # AI
 import google.generativeai as genai
 
@@ -432,6 +436,13 @@ def get_dynamic_time():
     # Convert to Discord timestamp tag
     return f"<t:{epoch_time}:R>"
 
+def get_qotd_data():
+    """Fetches the question of the day data from the JSON file."""
+    current_date = time.strftime("%Y-%m-%d")
+    with open('bot/qotd.json', 'r') as f:
+        qotd_questions = json.load(f)
+    return qotd_questions.get(current_date, {"question": "No question today!", "hint": "", "answer": ""})
+
 @client.tree.command()
 @app_commands.describe(equation="Enter the equation in LaTeX format.")
 async def render(interaction: discord.Interaction, equation: str):
@@ -616,6 +627,56 @@ async def start_quiz(interaction: discord.Interaction, number_of_questions: app_
     selected_questions = random.sample(questions[topic], min(number_of_questions, len(questions[topic])))
     view = MathQuizView(selected_questions)
     await interaction.response.send_message(content=f"{view.current_question['question']}", view=view)
+
+@client.tree.command()
+@app_commands.describe()
+async def qotd(interaction: discord.Interaction, subcommand: str, answer: str = None, date: str = None):
+    """
+    Base command for handling all QOTD functionalities.
+    Subcommands: view, answer, previous, hint.
+    """
+    if subcommand == 'view':
+        await qotd_view(interaction)
+    elif subcommand == 'answer' and answer:
+        await qotd_answer(interaction, answer)
+    elif subcommand == 'previous' and date:
+        await qotd_previous(interaction, date)
+    elif subcommand == 'hint':
+        await qotd_hint(interaction)
+
+async def qotd_view(interaction: discord.Interaction):
+    """Displays the question of the day."""
+    question_data = get_qotd_data()
+    image_path = visualize_equation(question_data['question'])
+    file = discord.File(image_path, filename='qotd.png')
+    await interaction.response.send_message(file=file, ephemeral=True)
+    os.remove(image_path)
+
+async def qotd_answer(interaction: discord.Interaction, user_answer: str):
+    """Allows users to answer the question of the day."""
+    question_data = get_qotd_data()
+    if user_answer.lower() == question_data['answer'].lower():
+        response = "Correct answer! 🎉"
+    else:
+        response = f"Incorrect answer. Try again! The correct answer is {question_data['answer']}."
+    await interaction.response.send_message(response, ephemeral=True)
+
+async def qotd_previous(interaction: discord.Interaction, date: str):
+    """Shows a previous question based on the input date."""
+    with open('bot/qotd.json', 'r') as f:
+        qotd_questions = json.load(f)
+    if date in qotd_questions:
+        image_path = visualize_equation(qotd_questions[date]['question'])
+        file = discord.File(image_path, filename='qotd.png')
+        await interaction.response.send_message(file=file, ephemeral=True)
+        os.remove(image_path)
+    else:
+        await interaction.response.send_message("No question found for that date.", ephemeral=True)
+
+async def qotd_hint(interaction: discord.Interaction):
+    """Provides a hint for the current day's question."""
+    question_data = get_qotd_data()
+    await interaction.response.send_message(question_data['hint'], ephemeral=True)
 
 # Run the client with the bot token
 client.run(TOKEN)
