@@ -1,5 +1,5 @@
 # Dockerfile
-FROM python:3.11-slim
+FROM python:3.13.0b1-slim
 
 # Install system dependencies for TeX Live, poppler-utils, CMake, and essential build tools
 RUN apt-get update && apt-get install -y \
