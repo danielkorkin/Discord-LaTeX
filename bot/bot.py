@@ -244,6 +244,7 @@ class MyClient(discord.Client):
         self.tree.copy_global_to(guild=MY_GUILD)
         await self.tree.sync(guild=MY_GUILD)
 
+
 # Initialize intents
 intents = discord.Intents.default()
 client = MyClient(intents=intents)
@@ -628,22 +629,9 @@ async def start_quiz(interaction: discord.Interaction, number_of_questions: app_
     view = MathQuizView(selected_questions)
     await interaction.response.send_message(content=f"{view.current_question['question']}", view=view)
 
-@client.tree.command()
-@app_commands.describe()
-async def qotd(interaction: discord.Interaction, subcommand: str, answer: str = None, date: str = None):
-    """
-    Base command for handling all QOTD functionalities.
-    Subcommands: view, answer, previous, hint.
-    """
-    if subcommand == 'view':
-        await qotd_view(interaction)
-    elif subcommand == 'answer' and answer:
-        await qotd_answer(interaction, answer)
-    elif subcommand == 'previous' and date:
-        await qotd_previous(interaction, date)
-    elif subcommand == 'hint':
-        await qotd_hint(interaction)
+group = app_commands.Group(name="qotd", description="Math Problem of the Day'")
 
+@group.command(name="view")
 async def qotd_view(interaction: discord.Interaction):
     """Displays the question of the day."""
     question_data = get_qotd_data()
@@ -652,15 +640,21 @@ async def qotd_view(interaction: discord.Interaction):
     await interaction.response.send_message(file=file, ephemeral=True)
     os.remove(image_path)
 
-async def qotd_answer(interaction: discord.Interaction, user_answer: str):
+@group.command(name="answer")
+async def qotd_answer(interaction: discord.Interaction, answer: str):
     """Allows users to answer the question of the day."""
     question_data = get_qotd_data()
-    if user_answer.lower() == question_data['answer'].lower():
+    if answer.lower() == question_data['answer'].lower():
         response = "Correct answer! 🎉"
     else:
         response = f"Incorrect answer. Try again! The correct answer is {question_data['answer']}."
     await interaction.response.send_message(response, ephemeral=True)
 
+@group.command(name="previous")
+@app_commands.choices(date=[
+    app_commands.Choice(name="May 1, 2024", value="2024-05-01"),
+    app_commands.Choice(name="May 10, 2024", value="2024-05-10"),
+])
 async def qotd_previous(interaction: discord.Interaction, date: str):
     """Shows a previous question based on the input date."""
     with open('bot/qotd.json', 'r') as f:
@@ -668,15 +662,18 @@ async def qotd_previous(interaction: discord.Interaction, date: str):
     if date in qotd_questions:
         image_path = visualize_equation(qotd_questions[date]['question'])
         file = discord.File(image_path, filename='qotd.png')
-        await interaction.response.send_message(file=file, ephemeral=True)
+        await interaction.response.send_message(content=f"**Answer:** {qotd_questions[date]['answer']}", file=file, ephemeral=True)
         os.remove(image_path)
     else:
         await interaction.response.send_message("No question found for that date.", ephemeral=True)
 
+@group.command(name="hint")
 async def qotd_hint(interaction: discord.Interaction):
     """Provides a hint for the current day's question."""
     question_data = get_qotd_data()
     await interaction.response.send_message(question_data['hint'], ephemeral=True)
+
+client.tree.add_command(group, guild=discord.Object(id=GUILD_ID))
 
 # Run the client with the bot token
 client.run(TOKEN)
