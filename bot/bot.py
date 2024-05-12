@@ -15,6 +15,7 @@ from io import BytesIO
 import json
 import random
 import asyncio
+import re
 
 # AI
 import google.generativeai as genai
@@ -352,38 +353,30 @@ def plot_function(expression: str):
         return None, str(e)  # Return no filename and the error message
 
  
-def get_AI_prompt(equation:str):
+def get_AI_prompt(equation: str):
     response = model.generate_content(f"{prompt} {equation}")
-    response = format_to_latex(response.text)
+    return format_to_latex(response.text)
 
-    try:
-        response.replace("$", "")
-    except Exception:
-        pass
+def format_to_latex(expression: str):
+    # Remove LaTeX specific delimiters
+    expression = expression.replace(r"\(", "").replace(r"\)", "").replace(r"$", "")
 
-    try:
-        response.replace("\(", "")
-        response.replace("\)", "")
-    except Exception:
-        pass
-
-    return response
-
-def format_to_latex(expression):
     # Replace implicit multiplication (e.g., '4x') with explicit (e.g., '4*x')
-    terms = list(expression)  # Convert expression into a list of characters
-    formatted_expression = []
+    expression = re.sub(r'(?<=\d)(?=[a-zA-Z])', r'*', expression)  # add '*' between digits and letters
+    expression = re.sub(r'(?<=[a-zA-Z])(?=\d)', r'*', expression)  # add '*' between letters and digits
 
-    # Iterate over the characters to identify and format multiplication
-    for i, char in enumerate(terms):
-        # Check if a multiplication should be inserted
-        if char.isdigit() and i+1 < len(terms) and terms[i+1].isalpha():
-            formatted_expression.append(char + '*')
-        else:
-            formatted_expression.append(char)
+    # Normalize LaTeX fractions to sympy format
+    expression = expression.replace(r'\frac', '/')
+    expression = re.sub(r'{(.*?)}{(.*?)}', r'(\1)/(\2)', expression)  # Convert {num}{den} to (num)/(den)
 
-    # Join all parts into a single string
-    return ''.join(formatted_expression)
+    return expression
+
+# Example of rendering Sympy output back to LaTeX
+def sympy_to_latex(expression):
+    latex_output = sp.latex(expression)
+    # Ensure it is clean and formatted correctly for display
+    latex_output = latex_output.replace(r'\left(', '(').replace(r'\right)', ')')
+    return latex_output
 
 # Function to plot a triangle
 def plot_triangle(a, b, c):
@@ -503,44 +496,44 @@ async def render_ai(interaction: discord.Interaction, message: discord.Message):
         await interaction.followup.send("An unexpected error occurred while rendering the equation.")
 
 @client.tree.command()
-@app_commands.describe(equation="Enter the equation in LaTeX format.")
+@app_commands.describe(equation="Enter the equation.")
 @app_commands.choices(operation=[
     app_commands.Choice(name="Simplify", value="simplify"),
     app_commands.Choice(name="Factor", value="factor"),
-    app_commands.Choice(name="Solve", value="solve"),
+    # app_commands.Choice(name="Solve", value="solve"),
 ])
 async def math_operation(interaction: discord.Interaction, equation: str, operation: str):
-    """Perform a mathematical operation on a given equation."""
+    """Solve (Temp Unavailable), Simplify, or Solve and Expression or Equation"""
     await interaction.response.defer(ephemeral=False, thinking=True)
-
-    equation = get_AI_prompt(equation)
-    # Parse the equation string into a Sympy expression
+    
+    # Preprocess and validate the equation
     try:
-        expr = sp.sympify(equation, evaluate=False)
+        processed_equation = preprocess_expression(equation)
+        expr = sp.sympify(processed_equation)
     except sp.SympifyError as e:
         await interaction.followup.send(f"Error parsing the equation: {e}")
         return
 
+    # Perform the operation
     try:
         if operation == 'simplify':
             result = sp.simplify(expr)
         elif operation == 'factor':
             result = sp.factor(expr)
         elif operation == 'solve':
-            # Assuming it's an equation and solving for x
             result = sp.solve(expr, sp.Symbol('x'))
         else:
             await interaction.followup.send("Unsupported operation. Please use 'simplify', 'factor', or 'solve'.")
             return
 
-        # Render the result as LaTeX and create an image
+        # Send the result back as LaTeX rendered image
         latex_result = sp.latex(result)
         image_path = visualize_equation(latex_result)
         with open(image_path, 'rb') as image_file:
             await interaction.followup.send(file=discord.File(image_file, os.path.basename(image_path)))
         os.remove(image_path)
     except Exception as e:
-        await interaction.followup.send(f"An unexpected error occurred while performing the operation: {e}")
+        await interaction.followup.send(f"An unexpected error occurred: {e}")
 
 @client.tree.command()
 @app_commands.describe(expression="Enter the function expression, like 'x^2 - 3*x + 5'.")
