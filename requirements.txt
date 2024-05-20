@@ -44,7 +44,7 @@ pyasn1_modules==0.4.0
 pydantic==2.7.1
 pydantic_core==2.18.2
 PyLaTeX==1.4.2
-pylint==3.1.0
+pylint==3.2.2
 pyparsing==3.1.2
 python-dateutil==2.9.0.post0
 python-dotenv==1.0.1
