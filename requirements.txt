@@ -54,7 +54,7 @@ rsa==4.9
 scipy==1.13.0
 six==1.16.0
 sympy==1.12
-tomlkit==0.12.4
+tomlkit==0.12.5
 tqdm==4.66.4
 typing_extensions==4.11.0
 uritemplate==4.1.1
